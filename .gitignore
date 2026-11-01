@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+runs/traces/
+.pytest_cache/
+.ruff_cache/
+.idea/
+runs/*.log
