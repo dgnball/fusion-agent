@@ -4,7 +4,7 @@ Everything here is fictional. The scenario is deterministic so evaluation questi
 It covers 24 hours of harbour activity across three kinds of data:
 
 - text reports (patrol logs, notices, radio logs)
-- camera images (rendered, so no third-party imagery is needed)
+- camera images (stills from assets/images when present, otherwise rendered as simple shapes)
 - vessel telemetry (AIS-style position reports every 10 minutes)
 
 A few events are planted for the agent to find. A fishing vessel loiters inside a restricted zone at night,
@@ -15,6 +15,7 @@ import csv
 import json
 import math
 import random
+import shutil
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -360,7 +361,12 @@ def render(path: Path, night: bool, subject: str | None, jetty: bool, seed: int)
     image.save(path)
 
 
-def generate(data_dir: Path) -> None:
+def generate(data_dir: Path, assets: Path | None = None) -> None:
+    """Write the scenario to `data_dir`.
+
+    If `assets` holds a still named after an image id, such as I-003.png, it's copied in place of the
+    rendered one. That lets realistic imagery stand in for the shapes while tests stay self-contained.
+    """
     data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "images").mkdir(exist_ok=True)
 
@@ -396,7 +402,11 @@ def generate(data_dir: Path) -> None:
         for number, (when, camera, night, subject) in enumerate(IMAGES, 1):
             image_id = f"I-{number:03}"
             path = data_dir / "images" / f"{image_id}.png"
-            render(path, night, subject, jetty=camera == "NG-1", seed=number)
+            still = assets / f"{image_id}.png" if assets else None
+            if still and still.exists():
+                shutil.copyfile(still, path)
+            else:
+                render(path, night, subject, jetty=camera == "NG-1", seed=number)
             handle.write(
                 json.dumps(
                     {

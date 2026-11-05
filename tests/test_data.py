@@ -59,3 +59,17 @@ def test_every_tool_has_a_schema():
         schema = tool.schema()
         assert schema["function"]["name"] == tool.name
         assert schema["function"]["parameters"]["type"] == "object"
+
+
+def test_assets_replace_rendered_images(tmp_path):
+    from PIL import Image
+
+    from fusion_agent.scenario import generate
+
+    assets = tmp_path / "assets"
+    assets.mkdir()
+    Image.new("RGB", (64, 36), (10, 200, 30)).save(assets / "I-003.png")
+    generate(tmp_path / "data", assets)
+    images = tmp_path / "data" / "images"
+    assert (images / "I-003.png").read_bytes() == (assets / "I-003.png").read_bytes()
+    assert Image.open(images / "I-001.png").size != (64, 36)

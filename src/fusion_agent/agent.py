@@ -93,8 +93,9 @@ class Agent:
             no_data=NO_DATA,
         )
 
-    def run(self, question: str) -> Result:
-        trace = Trace(self.trace_dir)
+    def run(self, question: str, listener=None) -> Result:
+        """Answer one question. `listener`, if given, receives every trace event as it happens."""
+        trace = Trace(self.trace_dir, listener)
         started = time.perf_counter()
         result = Result(question=question, answer="", citations=[], retrieved=[], run_id=trace.run_id)
         messages = [
@@ -130,8 +131,10 @@ class Agent:
             if reply.tool_calls:
                 for call in reply.tool_calls:
                     output = self.call_tool(call.name, call.arguments, seen_calls, result, trace)
-                    for source in source_ids(output):
+                    sources = list(dict.fromkeys(source_ids(output)))
+                    for source in sources:
                         retrieved[source] = None
+                    trace.log("tool_result", step=step, name=call.name, sources=sources, error=output.get("error"))
                     messages.append(
                         {"role": "tool", "tool_name": call.name, "content": json.dumps(output, default=str)}
                     )

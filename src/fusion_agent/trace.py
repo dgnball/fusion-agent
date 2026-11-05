@@ -7,12 +7,14 @@ something goes wrong.
 
 import json
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
 
 class Trace:
-    def __init__(self, directory: Path | None):
+    def __init__(self, directory: Path | None, listener: Callable[[dict], None] | None = None):
+        self.listener = listener
         self.run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:6]
         self.events: list[dict] = []
         self.path = directory / f"{self.run_id}.jsonl" if directory else None
@@ -27,6 +29,8 @@ class Trace:
             **fields,
         }
         self.events.append(record)
+        if self.listener:
+            self.listener(record)
         if self.path:
             with self.path.open("a") as handle:
                 handle.write(json.dumps(record, default=str) + "\n")

@@ -15,6 +15,7 @@ from . import netguard
 DATA = Path(os.environ.get("FUSION_DATA", "data"))
 DB = DATA / "fusion.duckdb"
 RUNS = Path(os.environ.get("FUSION_RUNS", "runs"))
+ASSETS = Path(os.environ.get("FUSION_ASSETS", "assets/images"))
 MODEL = os.environ.get("FUSION_MODEL", "qwen2.5:7b")
 OLLAMA = os.environ.get("OLLAMA_HOST_URL", "http://127.0.0.1:11434")
 
@@ -52,6 +53,9 @@ def main(argv=None):
     compare = commands.add_parser("compare", help="Compare saved evaluation reports")
     compare.add_argument("reports", nargs="+", type=Path)
     commands.add_parser("mcp", help="Serve the tools over MCP on stdio")
+    monitor = commands.add_parser("monitor", help="Open the Harbour Monitor web UI on 127.0.0.1")
+    monitor.add_argument("--port", type=int, default=8765)
+    monitor.add_argument("--model", default=MODEL)
     args = parser.parse_args(argv)
 
     if args.command == "fetch-models":
@@ -66,7 +70,7 @@ def main(argv=None):
     if args.command == "generate":
         from .scenario import generate
 
-        generate(DATA)
+        generate(DATA, ASSETS)
         print(f"Scenario written to {DATA}/")
     elif args.command == "ingest":
         from .embed import get_embedder
@@ -115,6 +119,11 @@ def main(argv=None):
         from .mcp_server import serve
 
         serve(open_store(args.embedder))
+    elif args.command == "monitor":
+        from .monitor import Monitor
+        from .monitor import serve as serve_monitor
+
+        serve_monitor(Monitor(open_store(args.embedder), DATA, RUNS, OLLAMA, args.model), args.port)
 
 
 def check_offline():
